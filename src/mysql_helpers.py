@@ -40,7 +40,7 @@ class MySQLHelper():
     def load_data_to_mysql(self, table_name, data):
         # Batch insert (Milvus_ids, img_path) to mysql
         self.test_connection()
-        sql = "insert into " + table_name + " (milvus_id,image_path) values (%s,%s);"
+        sql = "insert into " + table_name + " (milvus_id,image_path,product_id,content) values (%s,%s,%s,%s);"
         try:
             self.cursor.executemany(sql, data)
             self.conn.commit()
@@ -53,13 +53,15 @@ class MySQLHelper():
         # Get the img_path according to the milvus ids
         self.test_connection()
         str_ids = str(ids).replace('[', '').replace(']', '')
-        sql = "select image_path from " + table_name + " where milvus_id in (" + str_ids + ") order by field (milvus_id," + str_ids + ");"
+        sql = "select image_path, product_id, content from " + table_name + " where milvus_id in (" + str_ids + ") order by field (milvus_id," + str_ids + ");"
         try:
             self.cursor.execute(sql)
             results = self.cursor.fetchall()
-            results = [res[0] for res in results]
+            image_path = [res[0] for res in results]
+            product_id = [res[1] for res in results]
+            content = [res[2] for res in results]
             LOGGER.debug("MYSQL search by milvus id.")
-            return results
+            return image_path, product_id, content;
         except Exception as e:
             LOGGER.error(f"MYSQL ERROR: {e} with sql: {sql}")
             sys.exit(1)

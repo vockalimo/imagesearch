@@ -1,9 +1,11 @@
 import uvicorn
 import os
+import json
 from diskcache import Cache
 from fastapi import FastAPI, File, UploadFile
 from fastapi.param_functions import Form
-from starlette.middleware.cors import CORSMiddleware
+#from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 from encode import Resnet50
 from milvus_helpers import MilvusHelper
@@ -19,16 +21,27 @@ from pydantic import BaseModel
 from typing import Optional
 from urllib.request import urlretrieve
 
+
 app = FastAPI()
 origins = ["*"]
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:5000",
+    "https://laravel.test"
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-
 )
+
+
+
 MODEL = Resnet50()
 MILVUS_CLI = MilvusHelper()
 MYSQL_CLI = MySQLHelper()
@@ -107,9 +120,8 @@ async def search_images(image: UploadFile = File(...), topk: int = Form(TOP_K), 
         img_path = os.path.join(UPLOAD_PATH, image.filename)
         with open(img_path, "wb+") as f:
             f.write(content)
-        paths, distances = do_search(table_name, img_path, topk, MODEL, MILVUS_CLI, MYSQL_CLI)
-        res = dict(zip(paths, distances))
-        res = sorted(res.items(), key=lambda item: item[1])
+        paths, distances, product_id, content = do_search(table_name, img_path, topk, MODEL, MILVUS_CLI, MYSQL_CLI)
+        res = list(zip(paths, distances, product_id, content))
         LOGGER.info("Successfully searched similar images!")
         return res
     except Exception as e:
@@ -140,6 +152,36 @@ async def drop_tables(table_name: str = None):
         LOGGER.error(e)
         return {'status': False, 'msg': e}, 400
 
+@app.post('/img/uploadjson')
+async def upload_images(image: UploadFile = File(None), url: str = None, table_name: str = None):
+    # Insert the upload image to Milvus/MySQL
+    try:
+        content = await image.read()
+        #content = json.load(jsonfile);
+        print('read load json succ')
+        # dumpdata
+        img_path = os.path.join(UPLOAD_PATH, image.filename)
+        with open(img_path, "wb+") as f:
+            f.write(content)
+      #  print(content);
+        jsoncontent = json.loads(content);
+
+        for product in jsoncontent:
+            #print("id %s ,imgurl %s " %(product['productId'], product['mainImageURL']));
+            print(product['content'])
+            img_path = os.path.join(UPLOAD_PATH, os.path.basename(product['mainImageURL']))
+            urlretrieve(product['mainImageURL'], img_path)
+            vector_id = do_upload(table_name, img_path, MODEL, MILVUS_CLI, MYSQL_CLI, product_id=product['productId'], product_content=product['content'])
+            LOGGER.info(f"Successfully uploaded data, vector id: {vector_id}")
+
+        return "Successfully loaded data: ";
+    except Exception as e:
+        LOGGER.error(e)
+        return {'status': False, 'msg': e}, 400
+
+@app.get("/")
+async def main():
+    return {"message": "Hello World"}
 
 if __name__ == '__main__':
     uvicorn.run(app=app, host='0.0.0.0', port=5000)

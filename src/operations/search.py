@@ -12,9 +12,9 @@ def do_search(table_name, img_path, top_k, model, milvus_client, mysql_cli):
         feat = model.resnet50_extract_feat(img_path)
         vectors = milvus_client.search_vectors(table_name, [feat], top_k)
         vids = [str(x.id) for x in vectors[0]]
-        paths = mysql_cli.search_by_milvus_ids(vids, table_name)
+        paths, product_id, content = mysql_cli.search_by_milvus_ids(vids, table_name)
         distances = [x.distance for x in vectors[0]]
-        return paths, distances
+        return paths, distances, product_id, content
     except Exception as e:
         LOGGER.error(f"Error with search : {e}")
         sys.exit(1)

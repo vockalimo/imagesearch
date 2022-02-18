@@ -13,9 +13,9 @@ TOP_K = int(os.getenv("TOP_K", "10"))
 ############### MySQL Configuration ###############
 MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
-MYSQL_USER = os.getenv("MYSQL_USER", "root")
-MYSQL_PWD = os.getenv("MYSQL_PWD", "root")
-MYSQL_DB = os.getenv("MYSQL_DB", "mysql")
+MYSQL_USER = os.getenv("MYSQL_USER", "ideadbuser")
+MYSQL_PWD = os.getenv("MYSQL_PWD", "ideadbpassword")
+MYSQL_DB = os.getenv("MYSQL_DB", "ideadb")
 
 ############### Data Path ###############
 UPLOAD_PATH = os.getenv("UPLOAD_PATH", "tmp/search-images")
